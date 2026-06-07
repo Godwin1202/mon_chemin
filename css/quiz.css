@@ -1,0 +1,121 @@
+/* Styles quiz */
+/* ========== STYLES SPÉCIFIQUES AU QUIZ ========== */
+
+.quiz-container {
+    max-width: 800px;
+    margin: 50px auto;
+    background: white;
+    border-radius: 32px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.quiz-header {
+    background: #0F3B6A;
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+
+.quiz-header h2 {
+    margin-bottom: 10px;
+}
+
+.quiz-progress {
+    background: #E2E8F0;
+    height: 8px;
+    border-radius: 10px;
+    margin-top: 20px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    background: #2BAE66;
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.quiz-content {
+    padding: 40px;
+}
+
+.question {
+    margin-bottom: 30px;
+}
+
+.question h3 {
+    color: #0F3B6A;
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+}
+
+.options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border: 1px solid #CBD5E1;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.option:hover {
+    border-color: #2BAE66;
+    background: #F0FDF4;
+}
+
+.option input[type="radio"] {
+    accent-color: #2BAE66;
+    width: 18px;
+    height: 18px;
+}
+
+.quiz-navigation {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #E2E8F0;
+}
+
+.btn-prev, .btn-next, .btn-submit {
+    padding: 12px 28px;
+    border-radius: 40px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-prev {
+    background: #E2E8F0;
+    border: none;
+    color: #475569;
+}
+
+.btn-next, .btn-submit {
+    background: #2BAE66;
+    border: none;
+    color: white;
+}
+
+.btn-next:hover, .btn-submit:hover {
+    background: #239554;
+    transform: translateY(-2px);
+}
+
+.quiz-footer {
+    background: #F8FAFE;
+    padding: 20px 40px;
+    text-align: center;
+    border-top: 1px solid #E2E8F0;
+    color: #64748B;
+    font-size: 14px;
+}
