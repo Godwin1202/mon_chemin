@@ -2,14 +2,42 @@
 // index.php
 
 session_start();
+require_once 'php/db.php';
 
 // Vérifier si l'utilisateur est connecté
 $is_connected = isset($_SESSION['user_id']);
 $user_role = '';
+$user_prenom = '';
+$has_pending = 0;
+$has_result = 0;
 
 if ($is_connected) {
     $user_role = $_SESSION['user_role'] ?? 'eleve';
+    $user_prenom = $_SESSION['user_prenom'] ?? '';
+    
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_sessions WHERE utilisateur_id = ? AND statut = 'en_attente'");
+    $stmt->execute([$_SESSION['user_id']]);
+    $has_pending = $stmt->fetchColumn();
+    
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_sessions WHERE utilisateur_id = ? AND statut = 'publie'");
+    $stmt->execute([$_SESSION['user_id']]);
+    $has_result = $stmt->fetchColumn();
 }
+
+// Récupérer les universités
+$stmt = $pdo->query("SELECT * FROM universites LIMIT 6");
+$universites = $stmt->fetchAll();
+
+// Récupérer les domaines pour la section
+$stmt = $pdo->query("SELECT * FROM domaines ORDER BY nom");
+$domaines = $stmt->fetchAll();
+
+// Statistiques
+$stmt = $pdo->query("SELECT COUNT(*) FROM utilisateurs WHERE role = 'eleve'");
+$total_eleves = $stmt->fetchColumn();
+
+$stmt = $pdo->query("SELECT COUNT(*) FROM quiz_sessions WHERE statut = 'publie'");
+$total_validations = $stmt->fetchColumn();
 ?>
 
 <!DOCTYPE html>
@@ -17,18 +45,12 @@ if ($is_connected) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon Chemin - Accueil</title>
+    <title>Mon Chemin - Orientation Afrique de l'Ouest</title>
 
-    <!-- CSS -->
     <link rel="stylesheet" href="css/style.css">
-
-    <!-- Google Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-
 <body>
 
 <!-- HEADER -->
@@ -39,7 +61,7 @@ if ($is_connected) {
                 <i class="fa-solid fa-graduation-cap"></i>
                 <div>
                     <h2>Mon Chemin</h2>
-                    <p>Aide à l'orientation scolaire</p>
+                    <p>Orientation Afrique de l'Ouest</p>
                 </div>
             </a>
         </div>
@@ -54,10 +76,9 @@ if ($is_connected) {
 
         <div class="header-buttons">
             <?php if ($is_connected): ?>
-                <!-- Utilisateur connecté -->
                 <div class="user-menu">
-                    <a href="pages/profil.php" class="btn white-btn" style="text-decoration: none">
-                        <i class="fa-solid fa-user"></i> <span>Mon profil</span>
+                    <a href="pages/profil.php" class="btn white-btn" style="text-decoration: none;">
+                        <i class="fa-solid fa-user"></i> <span><?= htmlspecialchars($user_prenom) ?></span>
                     </a>
                     <?php if ($user_role === 'admin'): ?>
                         <a href="admin/dashboard.php" class="btn blue-btn">
@@ -69,14 +90,12 @@ if ($is_connected) {
                     </a>
                 </div>
             <?php else: ?>
-                <!-- Utilisateur non connecté -->
                 <a href="pages/connexion.php" class="btn white-btn">Se connecter</a>
                 <a href="pages/inscription.php" class="btn blue-btn">S'inscrire</a>
             <?php endif; ?>
         </div>
     </div>
 </header>
-
 
 <!-- HERO -->
 <section class="hero">
@@ -89,6 +108,21 @@ if ($is_connected) {
             <p class="hero-text">
                 L'orientation après le bac ou le DT est une étape complexe. Mon Chemin vous aide à identifier les parcours adaptés à votre profil grâce à un quiz validé par l'administration.
             </p>
+            
+            <?php if ($is_connected): ?>
+                <?php if ($has_pending > 0): ?>
+                    <div class="badge-notification badge-pending">
+                        <i class="fa-solid fa-clock"></i>
+                        Votre quiz est en cours d'analyse.
+                    </div>
+                <?php elseif ($has_result > 0): ?>
+                    <div class="badge-notification badge-result">
+                        <i class="fa-solid fa-check-circle"></i>
+                        Votre résultat est disponible. <a href="pages/resultats.php">Consultez-le ici</a>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+            
             <div class="hero-card">
                 <div class="hero-card-icon">
                     <i class="fa-solid fa-bullseye"></i>
@@ -191,26 +225,31 @@ if ($is_connected) {
     </div>
 </section>
 
-<!-- UNIVERSITÉS -->
+
 <section class="universities-section">
     <div class="container">
         <h2 class="section-title">Universités partenaires</h2>
         <div class="universities-grid">
-            <a href="pages/universites.php" class="university-card" style="text-decoration: none; color: inherit;">
-                <img src="assets/logos/uac.png" alt="Université d'Abomey-Calavi">
-                <h3>Université d'Abomey-Calavi</h3>
-            </a>
-            <a href="pages/universites.php" class="university-card" style="text-decoration: none; color: inherit;">
-                <img src="assets/logos/parakou.jpg" alt="Université de Parakou">
-                <h3>Université de Parakou</h3>
-            </a>
-            <a href="pages/universites.php" class="university-card" style="text-decoration: none; color: inherit;">
-                <img src="assets/logos/kara.jpg" alt="Université de Kara">
-                <h3>Université de Kara</h3>
-            </a>
-            <a href="pages/universites.php" class="university-card" style="text-decoration: none; color: inherit;">
-                <img src="assets/logos/lome.png" alt="Université de Lomé">
-                <h3>Université de Lomé</h3>
+            <?php foreach ($universites as $univ): ?>
+                <a href="pages/universites.php" class="university-card" style="text-decoration: none; color: inherit;">
+                    <?php 
+                    // Générer le nom du fichier image à partir du nom de l'université
+                    $image_name = strtolower(str_replace([' ', "'", 'é', 'è', 'ê', 'à', 'â', 'î', 'ô', 'û'], ['', '', 'e', 'e', 'e', 'a', 'a', 'i', 'o', 'u'], $univ['nom']));
+                    $image_path = 'assets/logos/' . $image_name . '.png';
+                    ?>
+                    <img src="<?= $image_path ?>" 
+                         alt="<?= htmlspecialchars($univ['nom']) ?>"
+                         onerror="this.style.display='none'">
+                    <h3><?= htmlspecialchars($univ['nom']) ?></h3>
+                    <p style="font-size:13px;color:#94a3b8;">
+                        <?= htmlspecialchars($univ['ville'] ?? '') ?><?= (!empty($univ['ville']) && !empty($univ['pays'])) ? ', ' : '' ?><?= htmlspecialchars($univ['pays'] ?? '') ?>
+                    </p>
+                </a>
+            <?php endforeach; ?>
+        </div>
+        <div style="text-align:center;margin-top:30px;">
+            <a href="pages/universites.php" class="btn blue-btn" style="text-decoration:none;">
+                Voir toutes les universités
             </a>
         </div>
     </div>
@@ -225,6 +264,7 @@ if ($is_connected) {
                 <img src="assets/images/conseil1.svg" alt="Conseil orientation">
                 <div class="tip-content">
                     <h3>Comment bien choisir son orientation ?</h3>
+                    <p style="color:#6b7280;font-size:14px;margin-bottom:12px;">Nos conseils pour faire le bon choix.</p>
                     <a href="pages/conseils.php">Lire l'article →</a>
                 </div>
             </div>
@@ -232,6 +272,7 @@ if ($is_connected) {
                 <img src="assets/images/conseil2.svg" alt="Débouchés">
                 <div class="tip-content">
                     <h3>Les débouchés après le bac</h3>
+                    <p style="color:#6b7280;font-size:14px;margin-bottom:12px;">Découvrez les métiers de demain.</p>
                     <a href="pages/conseils.php">Lire l'article →</a>
                 </div>
             </div>
@@ -239,6 +280,7 @@ if ($is_connected) {
                 <img src="assets/images/conseil3.svg" alt="Ressources">
                 <div class="tip-content">
                     <h3>Ressources pour les élèves</h3>
+                    <p style="color:#6b7280;font-size:14px;margin-bottom:12px;">Guides, fiches métiers et plus encore.</p>
                     <a href="pages/conseils.php">Lire l'article →</a>
                 </div>
             </div>
@@ -263,7 +305,7 @@ if ($is_connected) {
     <div class="container footer-grid">
         <div>
             <h3>Mon Chemin</h3>
-            <p>Votre partenaire pour une orientation scolaire moderne.</p>
+            <p>Votre partenaire pour une orientation scolaire moderne en Afrique de l'Ouest.</p>
         </div>
         <div>
             <h4>Liens utiles</h4>

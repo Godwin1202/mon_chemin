@@ -32,7 +32,8 @@ if (count($reponses) < 22) {
 }
 
 // Vérifier que l'utilisateur n'a pas déjà un quiz en attente
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_sessions WHERE utilisateur_id = ? AND statut_validation = 'en_attente'");
+// CORRECTION : 'statut' au lieu de 'statut_validation'
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_sessions WHERE utilisateur_id = ? AND statut = 'en_attente'");
 $stmt->execute([$user_id]);
 $has_pending = $stmt->fetchColumn();
 

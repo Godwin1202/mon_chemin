@@ -5,26 +5,8 @@ require_once '../php/db.php';
 require_once '../php/auth.php';
 
 redirigerSiNonConnecte();
-
 $user_id = $_SESSION['user_id'];
 $user_prenom = $_SESSION['user_prenom'];
-
-// Vérifier si l'utilisateur a un quiz en attente
-$stmt = $pdo->prepare("
-    SELECT statut_validation, date_fin 
-    FROM quiz_sessions 
-    WHERE utilisateur_id = ? 
-    ORDER BY date_fin DESC 
-    LIMIT 1
-");
-$stmt->execute([$user_id]);
-$last_quiz = $stmt->fetch();
-
-// Si aucun quiz n'existe, rediriger vers le quiz
-if (!$last_quiz) {
-    header('Location: quiz.php');
-    exit();
-}
 ?>
 
 <!DOCTYPE html>
@@ -37,6 +19,56 @@ if (!$last_quiz) {
     <link rel="stylesheet" href="../css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .attente-container {
+            max-width: 700px;
+            margin: 60px auto;
+            text-align: center;
+        }
+        .attente-card {
+            background: white;
+            border-radius: 32px;
+            padding: 50px 40px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        }
+        .attente-icon {
+            width: 100px;
+            height: 100px;
+            background: #eff6ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+        }
+        .attente-icon i {
+            font-size: 45px;
+            color: #2563eb;
+        }
+        .attente-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        .attente-title span {
+            color: #2563eb;
+        }
+        .attente-text {
+            color: #6b7280;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+        .attente-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .attente-buttons .btn {
+            text-decoration: none;
+        }
+    </style>
 </head>
 <body>
 
@@ -52,22 +84,20 @@ if (!$last_quiz) {
                 </div>
             </a>
         </div>
-
         <nav class="navbar">
             <a href="../index.php">Accueil</a>
-            <a href="quiz.php">Quiz</a>
+            <a href="quiz.php" class="active">Quiz</a>
             <a href="universites.php">Universités</a>
             <a href="conseils.php">Conseils</a>
             <a href="apropos.php">À propos</a>
         </nav>
-
         <div class="header-buttons">
             <div class="user-menu">
                 <a href="profil.php" class="btn white-btn">
-                    <i class="fa-solid fa-user"></i> <span>Mon profil</span>
+                    <i class="fa-solid fa-user"></i> Mon compte
                 </a>
                 <a href="../php/deconnexion.php" class="btn logout-btn">
-                    <i class="fa-solid fa-sign-out-alt"></i> <span>Déconnexion</span>
+                    <i class="fa-solid fa-sign-out-alt"></i> Déconnexion
                 </a>
             </div>
         </div>
@@ -75,54 +105,24 @@ if (!$last_quiz) {
 </header>
 
 <!-- PAGE D'ATTENTE -->
-<section class="hero">
-    <div class="container hero-content" style="justify-content: center; text-align: center;">
-        <div class="hero-left" style="text-align: center; max-width: 700px; margin: 0 auto;">
-            
-            <!-- Animation / Illustration -->
-            <div style="margin-bottom: 40px;">
-                <div style="width: 120px; height: 120px; background: #eff6ff; border-radius: 60px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                    <i class="fa-solid fa-paper-plane" style="font-size: 50px; color: #2563eb;"></i>
-                </div>
-            </div>
-            
-            <h1 style="margin-bottom: 20px;">Quiz <span>envoyé</span> !</h1>
-            
-            <div class="hero-card" style="margin: 0 auto 30px auto; max-width: 500px; text-align: left;">
-                <div class="hero-card-icon">
-                    <i class="fa-solid fa-check-circle"></i>
-                </div>
-                <div>
-                    <h3>Merci <?= htmlspecialchars($user_prenom) ?> !</h3>
-                    <p>Vos réponses ont été enregistrées avec succès.</p>
-                </div>
-            </div>
-            
-            <div style="background: #f8fafc; border-radius: 20px; padding: 30px; margin-bottom: 30px;">
-                <i class="fa-solid fa-hourglass-half" style="font-size: 30px; color: #2563eb; margin-bottom: 15px;"></i>
-                <p style="font-size: 16px; color: #4b5563;">
-                    Les résultats sont en cours d'analyse et de validation par notre équipe administrative.
-                </p>
-                <p style="font-size: 14px; color: #9ca3af; margin-top: 15px;">
-                    Délai moyen de traitement : 24 à 48 heures
-                </p>
-            </div>
-            
-            <p style="font-size: 15px; color: #6b7280; margin-bottom: 15px;">
-                <i class="fa-solid fa-envelope"></i> Vous serez notifié par email dès que votre orientation sera validée.
-            </p>
-            <p style="font-size: 14px; color: #9ca3af;">
-                En attendant, découvrez nos conseils d'orientation ou explorez les universités partenaires.
-            </p>
-            
-            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
-                <a href="conseils.php" class="btn white-btn" style="text-decoration: none;">
-                    <i class="fa-solid fa-lightbulb"></i> Voir les conseils
-                </a>
-                <a href="universites.php" class="btn blue-btn" style="text-decoration: none;">
-                    <i class="fa-solid fa-building-columns"></i> Explorer les universités
-                </a>
-            </div>
+<section class="attente-container">
+    <div class="attente-card">
+        <div class="attente-icon">
+            <i class="fa-solid fa-paper-plane"></i>
+        </div>
+        <h1 class="attente-title">Quiz <span>transmis</span> !</h1>
+        <p class="attente-text">
+            Votre questionnaire a été transmis avec succès.<br><br>
+            <strong>Nos conseillers vont analyser votre profil</strong> et valider les recommandations proposées par le système.<br><br>
+            Vous recevrez une notification dès que votre résultat sera disponible.
+        </p>
+        <div class="attente-buttons">
+            <a href="../index.php" class="btn white-btn">
+                <i class="fa-solid fa-house"></i> Retour à l'accueil
+            </a>
+            <a href="profil.php" class="btn blue-btn">
+                <i class="fa-solid fa-user"></i> Mon profil
+            </a>
         </div>
     </div>
 </section>

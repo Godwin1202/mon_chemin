@@ -5,27 +5,13 @@ session_start();
 require_once '../php/db.php';
 require_once '../php/auth.php';
 
-// Vérifier que l'utilisateur est connecté
-if (!isset($_SESSION['user_id'])) {
-    header('Location: connexion.php');
-    exit();
-}
+// ... votre code PHP ...
 
-$user_id = $_SESSION['user_id'];
+// Définir le préfixe pour les chemins
+$page_prefix = '../';
 
-// Vérifier si l'utilisateur a déjà un quiz en attente
-try {
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_sessions WHERE utilisateur_id = ? AND statut_validation = 'en_attente'");
-    $stmt->execute([$user_id]);
-    $has_pending = $stmt->fetchColumn();
-
-    if ($has_pending > 0) {
-        header('Location: attente.php');
-        exit();
-    }
-} catch (PDOException $e) {
-    // Table peut ne pas exister encore
-}
+// Inclure le header
+include '../includes/header.php';
 
 // Récupérer toutes les questions du quiz
 $questions = [];
@@ -344,30 +330,6 @@ function getDefaultOptions($question_num) {
 </head>
 <body>
 
-<header class="header">
-    <div class="container header-content">
-        <div class="logo">
-            <a href="../index.php" style="display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit;">
-                <i class="fa-solid fa-graduation-cap"></i>
-                <div>
-                    <h2>Mon Chemin</h2>
-                    <p>Aide à l'orientation scolaire</p>
-                </div>
-            </a>
-        </div>
-        <nav class="navbar">
-            <a href="../index.php">Accueil</a>
-            <a href="quiz.php" class="active">Quiz</a>
-            <a href="universites.php">Universités</a>
-            <a href="conseils.php">Conseils</a>
-            <a href="apropos.php">À propos</a>
-        </nav>
-        <div class="header-buttons">
-            <a href="profil.php" class="btn white-btn">Mon profil</a>
-            <a href="../php/auth.php?deconnexion=1" class="btn blue-btn">Déconnexion</a>
-        </div>
-    </div>
-</header>
 
 <section class="hero">
     <div class="container hero-content">
@@ -388,7 +350,7 @@ function getDefaultOptions($question_num) {
             </div>
         </div>
         <div class="hero-right">
-            <img src="../assets/illustrations/hero1.svg" alt="Quiz">
+            <img src="../assets/illustrations/quiz.svg" alt="Quiz">
         </div>
     </div>
 </section>
