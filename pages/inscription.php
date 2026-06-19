@@ -8,6 +8,10 @@ if (isset($_SESSION['user_id'])) {
     header('Location: ../index.php');
     exit();
 }
+// Définir le préfixe pour les chemins
+$page_prefix = '../';
+// Inclure le header
+include '../includes/header.php';
 
 $error = '';
 $form_data = [];
@@ -87,8 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <div class="auth-header">
                 <div class="auth-icon">
-                    <i class="fa-regular fa-user-plus"></i>
-                </div>
+<i class="fa-solid fa-user-plus"></i>                </div>
                 <h1>Inscription</h1>
                 <p>Créez votre compte en quelques instants</p>
             </div>

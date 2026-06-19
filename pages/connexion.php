@@ -12,6 +12,10 @@ if (isset($_SESSION['user_id'])) {
     }
     exit();
 }
+// Définir le préfixe pour les chemins
+$page_prefix = '../';
+// Inclure le header
+include '../includes/header.php';
 
 $error = '';
 $success = '';
@@ -108,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 
                 <button type="submit" class="auth-btn">
-                    <i class="fa-solid fa-arrow-right-to-bracket"></i> Se connecter
+                     Se connecter
                 </button>
             </form>
             

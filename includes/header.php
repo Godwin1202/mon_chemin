@@ -38,11 +38,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </nav>
 
         <div class="header-buttons">
-            <!-- BOUTON THEME -->
-            <button id="themeToggle" class="theme-btn" aria-label="Thème">
-                <i class="fa-solid fa-moon"></i>
-            </button>
-
             <?php if ($is_connected): ?>
                 <div class="user-menu">
                     <a href="<?= $page_prefix ?? '' ?>pages/profil.php" class="btn white-btn" style="text-decoration: none;">

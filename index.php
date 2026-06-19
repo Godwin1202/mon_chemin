@@ -225,7 +225,6 @@ $total_validations = $stmt->fetchColumn();
     </div>
 </section>
 
-
 <section class="universities-section">
     <div class="container">
         <h2 class="section-title">Universités partenaires</h2>
