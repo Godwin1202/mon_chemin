@@ -1,5 +1,5 @@
 <?php
-// admin/pdf.php
+// admin/universites_admin.php
 
 session_start();
 require_once '../php/db.php';
@@ -14,21 +14,17 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 $stmt = $pdo->query("SELECT COUNT(*) FROM quiz_resultats WHERE statut = 'en_attente'");
 $en_attente_total = $stmt->fetchColumn();
 
-// Récupérer la liste des PDF
+// Récupérer la liste des universités
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-$sql = "
-    SELECT dp.*, u.nom, u.prenom, u.email, qr.statut
-    FROM documents_pdf dp
-    JOIN quiz_resultats qr ON dp.resultat_id = qr.id
-    JOIN utilisateurs u ON qr.utilisateur_id = u.id
-";
+$sql = "SELECT u.*, 
+        (SELECT COUNT(*) FROM universites_filieres uf WHERE uf.universite_id = u.id) as nb_filieres
+        FROM universites u";
 
 if (!empty($search)) {
-    $sql .= " WHERE u.nom LIKE :search OR u.prenom LIKE :search OR u.email LIKE :search";
+    $sql .= " WHERE u.nom LIKE :search OR u.pays LIKE :search OR u.ville LIKE :search";
 }
-
-$sql .= " ORDER BY dp.date_creation DESC";
+$sql .= " ORDER BY u.pays, u.nom";
 
 $stmt = $pdo->prepare($sql);
 if (!empty($search)) {
@@ -36,7 +32,7 @@ if (!empty($search)) {
 } else {
     $stmt->execute();
 }
-$pdf_list = $stmt->fetchAll();
+$universites = $stmt->fetchAll();
 
 $page_prefix = '../';
 include '../includes/header.php';
@@ -47,7 +43,7 @@ include '../includes/header.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documents PDF - Administration</title>
+    <title>Universités - Administration</title>
 
     <link rel="stylesheet" href="../css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -138,6 +134,22 @@ include '../includes/header.php';
             margin-right: 8px;
         }
 
+        .admin-main .header-bar .btn-add {
+            padding: 8px 18px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .admin-main .header-bar .btn-add:hover {
+            background: var(--primary-dark);
+        }
+
         .search-bar {
             display: flex;
             gap: 12px;
@@ -209,6 +221,16 @@ include '../includes/header.php';
             background: #fafafa;
         }
 
+        .badge-filieres {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
         .badge-status {
             display: inline-block;
             padding: 3px 12px;
@@ -217,29 +239,6 @@ include '../includes/header.php';
             font-weight: 600;
             background: var(--primary-light);
             color: var(--primary);
-        }
-
-        .badge-status.en_attente { background: #fef3c7; color: #92400e; }
-        .badge-status.valide { background: #dbeafe; color: #1d4ed8; }
-        .badge-status.publie { background: #d1fae5; color: #065f46; }
-        .badge-status.rejete { background: #fee2e2; color: #991b1b; }
-
-        .badge-envoi {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 30px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .badge-envoi.envoye {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .badge-envoi.non_envoye {
-            background: #f1f5f9;
-            color: #94a3b8;
         }
 
         .btn-sm {
@@ -290,18 +289,6 @@ include '../includes/header.php';
             margin-bottom: 8px;
         }
 
-        .file-info {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            color: #94a3b8;
-        }
-
-        .file-info i {
-            color: #ef4444;
-        }
-
         @media (max-width: 768px) {
             .admin-sidebar {
                 width: 60px;
@@ -330,7 +317,6 @@ include '../includes/header.php';
 <body>
 
 <div class="admin-wrap">
-    <!-- Sidebar -->
     <aside class="admin-sidebar">
         <div class="sidebar-header">
             <h3>Mon Chemin</h3>
@@ -349,29 +335,28 @@ include '../includes/header.php';
             <a href="utilisateurs.php">
                 <i class="fa-solid fa-users"></i> <span>Élèves</span>
             </a>
-            <a href="universites_admin.php">
+            <a href="universites_admin.php" class="active">
                 <i class="fa-solid fa-building-columns"></i> <span>Universités</span>
             </a>
             <a href="filieres_admin.php">
                 <i class="fa-solid fa-graduation-cap"></i> <span>Filières</span>
             </a>
-            <a href="pdf.php" class="active">
-                <i class="fa-solid fa-file-pdf"></i> <span>Documents PDF</span>
-            </a>
         </nav>
     </aside>
 
-    <!-- Main -->
     <main class="admin-main">
         <div class="header-bar">
-            <h1><i class="fa-solid fa-file-pdf"></i> Documents PDF</h1>
+            <h1><i class="fa-solid fa-building-columns"></i> Universités</h1>
+            <a href="universite_ajouter.php" class="btn-add">
+                <i class="fa-solid fa-plus"></i> Ajouter
+            </a>
         </div>
 
         <form method="GET" class="search-bar">
-            <input type="text" name="search" placeholder="Rechercher par nom, prénom ou email..." value="<?= htmlspecialchars($search) ?>">
+            <input type="text" name="search" placeholder="Rechercher une université..." value="<?= htmlspecialchars($search) ?>">
             <button type="submit"><i class="fa-solid fa-search"></i> Rechercher</button>
             <?php if (!empty($search)): ?>
-                <a href="pdf.php" class="btn-sm-outline" style="padding:8px 16px;display:inline-flex;align-items:center;gap:6px;">
+                <a href="universites_admin.php" class="btn-sm-outline" style="padding:8px 16px;display:inline-flex;align-items:center;gap:6px;">
                     <i class="fa-solid fa-xmark"></i> Réinitialiser
                 </a>
             <?php endif; ?>
@@ -381,50 +366,42 @@ include '../includes/header.php';
             <table class="admin-table">
                 <thead>
                     <tr>
-                        <th>Élève</th>
-                        <th>Email</th>
-                        <th>Date génération</th>
-                        <th>Statut quiz</th>
-                        <th>Email envoyé</th>
-                        <th>WhatsApp envoyé</th>
+                        <th>Nom</th>
+                        <th>Pays</th>
+                        <th>Ville</th>
+                        <th>Type</th>
+                        <th>Filières</th>
                         <th style="text-align:right;">Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (empty($pdf_list)): ?>
+                    <?php if (empty($universites)): ?>
                         <tr>
-                            <td colspan="7" class="empty-state">
-                                <i class="fa-solid fa-file-pdf"></i>
-                                Aucun document PDF trouvé
+                            <td colspan="6" class="empty-state">
+                                <i class="fa-solid fa-building-columns"></i>
+                                Aucune université trouvée
                             </td>
                         </tr>
                     <?php else: ?>
-                        <?php foreach ($pdf_list as $pdf): ?>
+                        <?php foreach ($universites as $univ): ?>
                             <tr>
-                                <td><?= htmlspecialchars($pdf['prenom'] . ' ' . $pdf['nom']) ?></td>
-                                <td><?= htmlspecialchars($pdf['email']) ?></td>
-                                <td><?= date('d/m/Y H:i', strtotime($pdf['date_creation'])) ?></td>
+                                <td><strong><?= htmlspecialchars($univ['nom']) ?></strong></td>
+                                <td><?= htmlspecialchars($univ['pays']) ?></td>
+                                <td><?= htmlspecialchars($univ['ville'] ?? '—') ?></td>
                                 <td>
-                                    <span class="badge-status <?= $pdf['statut'] ?>">
-                                        <?= ucfirst(str_replace('_', ' ', $pdf['statut'])) ?>
+                                    <span class="badge-status">
+                                        <?= $univ['type_universite'] === 'publique' ? 'Publique' : 'Privée' ?>
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge-envoi <?= $pdf['envoye_email'] ? 'envoye' : 'non_envoye' ?>">
-                                        <?= $pdf['envoye_email'] ? '✅ Envoyé' : '❌ Non envoyé' ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge-envoi <?= $pdf['envoye_whatsapp'] ? 'envoye' : 'non_envoye' ?>">
-                                        <?= $pdf['envoye_whatsapp'] ? '✅ Envoyé' : '❌ Non envoyé' ?>
-                                    </span>
+                                    <span class="badge-filieres"><?= $univ['nb_filieres'] ?> filière<?= $univ['nb_filieres'] > 1 ? 's' : '' ?></span>
                                 </td>
                                 <td style="text-align:right;">
-                                    <a href="<?= $pdf['chemin_fichier'] ?>" target="_blank" class="btn-sm">
+                                    <a href="universite_detail.php?id=<?= $univ['id'] ?>" class="btn-sm">
                                         <i class="fa-solid fa-eye"></i> Voir
                                     </a>
-                                    <a href="../php/generate_pdf.php?regenerate=<?= $pdf['resultat_id'] ?>" class="btn-sm-outline" onclick="return confirm('Régénérer le PDF ?')">
-                                        <i class="fa-solid fa-rotate"></i>
+                                    <a href="universite_editer.php?id=<?= $univ['id'] ?>" class="btn-sm-outline">
+                                        <i class="fa-solid fa-pen"></i>
                                     </a>
                                 </td>
                             </tr>

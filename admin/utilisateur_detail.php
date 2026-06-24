@@ -1,37 +1,42 @@
 <?php
-// admin/validations.php
+// admin/utilisateur_detail.php
 
 session_start();
 require_once '../php/db.php';
 require_once '../php/auth.php';
 
+// Vérifier que l'utilisateur est admin
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     header('Location: login.php');
     exit();
 }
 
+$user_id = $_GET['id'] ?? 0;
+
+// Récupérer les informations de l'utilisateur
+$stmt = $pdo->prepare("SELECT * FROM utilisateurs WHERE id = ?");
+$stmt->execute([$user_id]);
+$user = $stmt->fetch();
+
+if (!$user) {
+    header('Location: utilisateurs.php');
+    exit();
+}
+
+// Récupérer les quiz de l'utilisateur
+$stmt = $pdo->prepare("
+    SELECT qr.*, qs.date_debut 
+    FROM quiz_resultats qr
+    JOIN quiz_sessions qs ON qr.session_id = qs.id
+    WHERE qr.utilisateur_id = ?
+    ORDER BY qr.date_creation DESC
+");
+$stmt->execute([$user_id]);
+$quiz_list = $stmt->fetchAll();
+
 // Récupérer le nombre de quiz en attente pour le badge
 $stmt = $pdo->query("SELECT COUNT(*) FROM quiz_resultats WHERE statut = 'en_attente'");
 $en_attente_total = $stmt->fetchColumn();
-
-$statut_filtre = $_GET['statut'] ?? 'en_attente';
-
-// Requête corrigée avec quiz_resultats
-$sql = "
-    SELECT qr.*, u.nom, u.prenom, u.email 
-    FROM quiz_resultats qr
-    JOIN utilisateurs u ON qr.utilisateur_id = u.id
-";
-if ($statut_filtre !== 'tous') {
-    $sql .= " WHERE qr.statut = :statut";
-    $sql .= " ORDER BY qr.date_creation DESC";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute(['statut' => $statut_filtre]);
-} else {
-    $sql .= " ORDER BY qr.date_creation DESC";
-    $stmt = $pdo->query($sql);
-}
-$quiz_list = $stmt->fetchAll();
 
 $page_prefix = '../';
 include '../includes/header.php';
@@ -42,7 +47,7 @@ include '../includes/header.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Validations - Administration</title>
+    <title>Détail de l'élève - Administration</title>
 
     <link rel="stylesheet" href="../css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -133,42 +138,77 @@ include '../includes/header.php';
             margin-right: 8px;
         }
 
-        .filter-tabs {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
-
-        .filter-tab {
-            padding: 6px 16px;
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 30px;
+        .admin-main .header-bar .btn-back {
+            padding: 8px 18px;
+            background: var(--primary);
+            color: white;
+            border-radius: 10px;
             text-decoration: none;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--gray);
+            font-size: 14px;
+            font-weight: 600;
             transition: 0.2s;
         }
 
-        .filter-tab:hover {
-            border-color: var(--primary);
-            color: var(--primary);
+        .admin-main .header-bar .btn-back:hover {
+            background: var(--primary-dark);
         }
 
-        .filter-tab.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        .admin-table-wrap {
+        .admin-card {
             background: white;
             border: 1px solid var(--border);
             border-radius: 16px;
-            overflow: hidden;
+            padding: 22px 25px;
+            margin-bottom: 20px;
         }
+
+        .admin-card h2 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .admin-card h2 i {
+            color: var(--gray);
+            margin-right: 8px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px 30px;
+        }
+
+        .info-grid .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 14px;
+        }
+
+        .info-grid .info-item .label {
+            color: var(--gray);
+        }
+
+        .info-grid .info-item .value {
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .status-badge.en_attente { background: #fef3c7; color: #92400e; }
+        .status-badge.valide { background: #dbeafe; color: #1d4ed8; }
+        .status-badge.publie { background: #d1fae5; color: #065f46; }
+        .status-badge.rejete { background: #fee2e2; color: #991b1b; }
 
         .admin-table {
             width: 100%;
@@ -194,16 +234,6 @@ include '../includes/header.php';
 
         .admin-table tr:hover td {
             background: #fafafa;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 3px 12px;
-            border-radius: 30px;
-            font-size: 12px;
-            font-weight: 600;
-            background: var(--primary-light);
-            color: var(--primary);
         }
 
         .btn-sm {
@@ -252,6 +282,9 @@ include '../includes/header.php';
             .admin-main {
                 padding: 20px;
             }
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -268,13 +301,13 @@ include '../includes/header.php';
             <a href="dashboard.php">
                 <i class="fa-solid fa-chart-line"></i> <span>Dashboard</span>
             </a>
-            <a href="validations.php" class="active">
+            <a href="validations.php">
                 <i class="fa-solid fa-clock"></i> <span>Validations</span>
                 <?php if ($en_attente_total > 0): ?>
                     <span class="badge"><?= $en_attente_total ?></span>
                 <?php endif; ?>
             </a>
-            <a href="utilisateurs.php">
+            <a href="utilisateurs.php" class="active">
                 <i class="fa-solid fa-users"></i> <span>Élèves</span>
             </a>
             <a href="universites_admin.php">
@@ -289,44 +322,73 @@ include '../includes/header.php';
     <!-- Main -->
     <main class="admin-main">
         <div class="header-bar">
-            <h1><i class="fa-regular fa-clock"></i> Validations</h1>
+            <h1><i class="fa-regular fa-user"></i> Détail de l'élève</h1>
+            <a href="utilisateurs.php" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Retour</a>
         </div>
 
-        <div class="filter-tabs">
-            <a href="?statut=en_attente" class="filter-tab <?= $statut_filtre === 'en_attente' ? 'active' : '' ?>">En attente</a>
-            <a href="?statut=valide" class="filter-tab <?= $statut_filtre === 'valide' ? 'active' : '' ?>">Validés</a>
-            <a href="?statut=publie" class="filter-tab <?= $statut_filtre === 'publie' ? 'active' : '' ?>">Publiés</a>
-            <a href="?statut=rejete" class="filter-tab <?= $statut_filtre === 'rejete' ? 'active' : '' ?>">Rejetés</a>
-            <a href="?statut=tous" class="filter-tab <?= $statut_filtre === 'tous' ? 'active' : '' ?>">Tous</a>
+        <!-- Informations -->
+        <div class="admin-card">
+            <h2><i class="fa-regular fa-circle-user"></i> Informations personnelles</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="label">Nom complet</span>
+                    <span class="value"><?= htmlspecialchars($user['prenom'] . ' ' . $user['nom']) ?></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Email</span>
+                    <span class="value"><?= htmlspecialchars($user['email']) ?></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Téléphone</span>
+                    <span class="value"><?= htmlspecialchars($user['telephone'] ?? '—') ?></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Niveau</span>
+                    <span class="value"><?= htmlspecialchars($user['niveau'] ?? '—') ?></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Handicap</span>
+                    <span class="value"><?= $user['situation_handicap'] ? 'Oui' : 'Non' ?></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Date d'inscription</span>
+                    <span class="value"><?= date('d/m/Y', strtotime($user['date_creation'])) ?></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Statut</span>
+                    <span class="value">
+                        <span class="status-badge <?= $user['actif'] == 1 ? '' : 'inactif' ?>">
+                            <?= $user['actif'] == 1 ? 'Actif' : 'Inactif' ?>
+                        </span>
+                    </span>
+                </div>
+            </div>
         </div>
 
-        <div class="admin-table-wrap">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Élève</th>
-                        <th>Email</th>
-                        <th>Date</th>
-                        <th>Statut</th>
-                        <th style="text-align:right;">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($quiz_list)): ?>
+        <!-- Quiz de l'élève -->
+        <div class="admin-card">
+            <h2><i class="fa-regular fa-file-lines"></i> Quiz de l'élève</h2>
+            
+            <?php if (empty($quiz_list)): ?>
+                <div class="empty-state">
+                    <i class="fa-regular fa-check-circle"></i>
+                    Aucun quiz trouvé pour cet élève
+                </div>
+            <?php else: ?>
+                <table class="admin-table">
+                    <thead>
                         <tr>
-                            <td colspan="5" class="empty-state">
-                                <i class="fa-regular fa-check-circle"></i>
-                                Aucun quiz trouvé
-                            </td>
+                            <th>Date</th>
+                            <th>Statut</th>
+                            <th style="text-align:right;">Action</th>
                         </tr>
-                    <?php else: ?>
+                    </thead>
+                    <tbody>
                         <?php foreach ($quiz_list as $quiz): ?>
                             <tr>
-                                <td><?= htmlspecialchars($quiz['prenom'] . ' ' . $quiz['nom']) ?></td>
-                                <td><?= htmlspecialchars($quiz['email']) ?></td>
                                 <td><?= date('d/m/Y H:i', strtotime($quiz['date_creation'])) ?></td>
                                 <td>
-                                    <span class="status-badge">
+                                    <span class="status-badge <?= $quiz['statut'] ?>">
                                         <?= ucfirst(str_replace('_', ' ', $quiz['statut'])) ?>
                                     </span>
                                 </td>
@@ -337,9 +399,9 @@ include '../includes/header.php';
                                 </td>
                             </tr>
                         <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            <?php endif; ?>
         </div>
     </main>
 </div>

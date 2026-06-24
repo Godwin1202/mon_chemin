@@ -1,5 +1,5 @@
 <?php
-// admin/pdf.php
+// admin/filieres_admin.php
 
 session_start();
 require_once '../php/db.php';
@@ -14,29 +14,37 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 $stmt = $pdo->query("SELECT COUNT(*) FROM quiz_resultats WHERE statut = 'en_attente'");
 $en_attente_total = $stmt->fetchColumn();
 
-// Récupérer la liste des PDF
+// Récupérer la liste des filières
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$domaine_filter = isset($_GET['domaine']) ? (int)$_GET['domaine'] : 0;
 
 $sql = "
-    SELECT dp.*, u.nom, u.prenom, u.email, qr.statut
-    FROM documents_pdf dp
-    JOIN quiz_resultats qr ON dp.resultat_id = qr.id
-    JOIN utilisateurs u ON qr.utilisateur_id = u.id
+    SELECT f.*, d.nom as domaine_nom,
+           (SELECT COUNT(*) FROM universites_filieres uf WHERE uf.filiere_id = f.id) as nb_universites
+    FROM filieres f
+    LEFT JOIN domaines d ON f.domaine_id = d.id
+    WHERE 1=1
 ";
 
+$params = [];
 if (!empty($search)) {
-    $sql .= " WHERE u.nom LIKE :search OR u.prenom LIKE :search OR u.email LIKE :search";
+    $sql .= " AND (f.nom LIKE :search)";
+    $params['search'] = '%' . $search . '%';
+}
+if ($domaine_filter > 0) {
+    $sql .= " AND f.domaine_id = :domaine_id";
+    $params['domaine_id'] = $domaine_filter;
 }
 
-$sql .= " ORDER BY dp.date_creation DESC";
+$sql .= " ORDER BY d.nom, f.nom";
 
 $stmt = $pdo->prepare($sql);
-if (!empty($search)) {
-    $stmt->execute(['search' => '%' . $search . '%']);
-} else {
-    $stmt->execute();
-}
-$pdf_list = $stmt->fetchAll();
+$stmt->execute($params);
+$filieres = $stmt->fetchAll();
+
+// Récupérer les domaines pour le filtre
+$stmt = $pdo->query("SELECT id, nom FROM domaines ORDER BY nom");
+$domaines = $stmt->fetchAll();
 
 $page_prefix = '../';
 include '../includes/header.php';
@@ -47,7 +55,7 @@ include '../includes/header.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documents PDF - Administration</title>
+    <title>Filières - Administration</title>
 
     <link rel="stylesheet" href="../css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -138,6 +146,22 @@ include '../includes/header.php';
             margin-right: 8px;
         }
 
+        .admin-main .header-bar .btn-add {
+            padding: 8px 18px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .admin-main .header-bar .btn-add:hover {
+            background: var(--primary-dark);
+        }
+
         .search-bar {
             display: flex;
             gap: 12px;
@@ -147,7 +171,7 @@ include '../includes/header.php';
 
         .search-bar input {
             flex: 1;
-            max-width: 350px;
+            max-width: 300px;
             padding: 8px 14px;
             border: 1px solid var(--border);
             border-radius: 10px;
@@ -156,6 +180,21 @@ include '../includes/header.php';
         }
 
         .search-bar input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .search-bar select {
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+            min-width: 180px;
+        }
+
+        .search-bar select:focus {
             outline: none;
             border-color: var(--primary);
         }
@@ -209,6 +248,26 @@ include '../includes/header.php';
             background: #fafafa;
         }
 
+        .badge-domain {
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .badge-univ {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
         .badge-status {
             display: inline-block;
             padding: 3px 12px;
@@ -219,25 +278,7 @@ include '../includes/header.php';
             color: var(--primary);
         }
 
-        .badge-status.en_attente { background: #fef3c7; color: #92400e; }
-        .badge-status.valide { background: #dbeafe; color: #1d4ed8; }
-        .badge-status.publie { background: #d1fae5; color: #065f46; }
-        .badge-status.rejete { background: #fee2e2; color: #991b1b; }
-
-        .badge-envoi {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 30px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .badge-envoi.envoye {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .badge-envoi.non_envoye {
+        .badge-status.inactif {
             background: #f1f5f9;
             color: #94a3b8;
         }
@@ -290,18 +331,6 @@ include '../includes/header.php';
             margin-bottom: 8px;
         }
 
-        .file-info {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            color: #94a3b8;
-        }
-
-        .file-info i {
-            color: #ef4444;
-        }
-
         @media (max-width: 768px) {
             .admin-sidebar {
                 width: 60px;
@@ -324,13 +353,15 @@ include '../includes/header.php';
             .search-bar input {
                 max-width: 100%;
             }
+            .search-bar select {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
 
 <div class="admin-wrap">
-    <!-- Sidebar -->
     <aside class="admin-sidebar">
         <div class="sidebar-header">
             <h3>Mon Chemin</h3>
@@ -352,26 +383,33 @@ include '../includes/header.php';
             <a href="universites_admin.php">
                 <i class="fa-solid fa-building-columns"></i> <span>Universités</span>
             </a>
-            <a href="filieres_admin.php">
+            <a href="filieres_admin.php" class="active">
                 <i class="fa-solid fa-graduation-cap"></i> <span>Filières</span>
-            </a>
-            <a href="pdf.php" class="active">
-                <i class="fa-solid fa-file-pdf"></i> <span>Documents PDF</span>
             </a>
         </nav>
     </aside>
 
-    <!-- Main -->
     <main class="admin-main">
         <div class="header-bar">
-            <h1><i class="fa-solid fa-file-pdf"></i> Documents PDF</h1>
+            <h1><i class="fa-solid fa-graduation-cap"></i> Filières</h1>
+            <a href="filiere_ajouter.php" class="btn-add">
+                <i class="fa-solid fa-plus"></i> Ajouter
+            </a>
         </div>
 
         <form method="GET" class="search-bar">
-            <input type="text" name="search" placeholder="Rechercher par nom, prénom ou email..." value="<?= htmlspecialchars($search) ?>">
+            <input type="text" name="search" placeholder="Rechercher une filière..." value="<?= htmlspecialchars($search) ?>">
+            <select name="domaine">
+                <option value="0">Tous les domaines</option>
+                <?php foreach ($domaines as $domaine): ?>
+                    <option value="<?= $domaine['id'] ?>" <?= $domaine_filter == $domaine['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($domaine['nom']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
             <button type="submit"><i class="fa-solid fa-search"></i> Rechercher</button>
-            <?php if (!empty($search)): ?>
-                <a href="pdf.php" class="btn-sm-outline" style="padding:8px 16px;display:inline-flex;align-items:center;gap:6px;">
+            <?php if (!empty($search) || $domaine_filter > 0): ?>
+                <a href="filieres_admin.php" class="btn-sm-outline" style="padding:8px 16px;display:inline-flex;align-items:center;gap:6px;">
                     <i class="fa-solid fa-xmark"></i> Réinitialiser
                 </a>
             <?php endif; ?>
@@ -381,50 +419,44 @@ include '../includes/header.php';
             <table class="admin-table">
                 <thead>
                     <tr>
-                        <th>Élève</th>
-                        <th>Email</th>
-                        <th>Date génération</th>
-                        <th>Statut quiz</th>
-                        <th>Email envoyé</th>
-                        <th>WhatsApp envoyé</th>
+                        <th>Filière</th>
+                        <th>Domaine</th>
+                        <th>Durée</th>
+                        <th>Universités</th>
+                        <th>Statut</th>
                         <th style="text-align:right;">Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (empty($pdf_list)): ?>
+                    <?php if (empty($filieres)): ?>
                         <tr>
-                            <td colspan="7" class="empty-state">
-                                <i class="fa-solid fa-file-pdf"></i>
-                                Aucun document PDF trouvé
+                            <td colspan="6" class="empty-state">
+                                <i class="fa-solid fa-graduation-cap"></i>
+                                Aucune filière trouvée
                             </td>
                         </tr>
                     <?php else: ?>
-                        <?php foreach ($pdf_list as $pdf): ?>
+                        <?php foreach ($filieres as $filiere): ?>
                             <tr>
-                                <td><?= htmlspecialchars($pdf['prenom'] . ' ' . $pdf['nom']) ?></td>
-                                <td><?= htmlspecialchars($pdf['email']) ?></td>
-                                <td><?= date('d/m/Y H:i', strtotime($pdf['date_creation'])) ?></td>
+                                <td><strong><?= htmlspecialchars($filiere['nom']) ?></strong></td>
                                 <td>
-                                    <span class="badge-status <?= $pdf['statut'] ?>">
-                                        <?= ucfirst(str_replace('_', ' ', $pdf['statut'])) ?>
-                                    </span>
+                                    <span class="badge-domain"><?= htmlspecialchars($filiere['domaine_nom'] ?? 'Non défini') ?></span>
+                                </td>
+                                <td><?= htmlspecialchars($filiere['duree_etudes'] ?? '—') ?></td>
+                                <td>
+                                    <span class="badge-univ"><?= $filiere['nb_universites'] ?> université<?= $filiere['nb_universites'] > 1 ? 's' : '' ?></span>
                                 </td>
                                 <td>
-                                    <span class="badge-envoi <?= $pdf['envoye_email'] ? 'envoye' : 'non_envoye' ?>">
-                                        <?= $pdf['envoye_email'] ? '✅ Envoyé' : '❌ Non envoyé' ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge-envoi <?= $pdf['envoye_whatsapp'] ? 'envoye' : 'non_envoye' ?>">
-                                        <?= $pdf['envoye_whatsapp'] ? '✅ Envoyé' : '❌ Non envoyé' ?>
+                                    <span class="badge-status <?= $filiere['actif'] == 1 ? '' : 'inactif' ?>">
+                                        <?= $filiere['actif'] == 1 ? 'Actif' : 'Inactif' ?>
                                     </span>
                                 </td>
                                 <td style="text-align:right;">
-                                    <a href="<?= $pdf['chemin_fichier'] ?>" target="_blank" class="btn-sm">
+                                    <a href="filiere_detail.php?id=<?= $filiere['id'] ?>" class="btn-sm">
                                         <i class="fa-solid fa-eye"></i> Voir
                                     </a>
-                                    <a href="../php/generate_pdf.php?regenerate=<?= $pdf['resultat_id'] ?>" class="btn-sm-outline" onclick="return confirm('Régénérer le PDF ?')">
-                                        <i class="fa-solid fa-rotate"></i>
+                                    <a href="filiere_editer.php?id=<?= $filiere['id'] ?>" class="btn-sm-outline">
+                                        <i class="fa-solid fa-pen"></i>
                                     </a>
                                 </td>
                             </tr>

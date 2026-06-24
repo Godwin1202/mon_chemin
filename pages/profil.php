@@ -184,6 +184,7 @@ include '../includes/header.php';
             text-align: center;
             display: block;
             font-size: 14px;
+            text-decoration: none;
         }
 
         .btn-primary {
@@ -282,7 +283,7 @@ include '../includes/header.php';
         <!-- Colonne gauche -->
         <div>
             <div class="profil-card">
-                <h2><i class="fa-regular fa-circle-user"></i> Informations</h2>
+                <h2><i class="fa-solid fa-circle-user"></i> Informations</h2>
                 
                 <div class="info-row">
                     <span class="label">Nom complet</span>
@@ -321,7 +322,7 @@ include '../includes/header.php';
                 </div>
                 <?php endif; ?>
 
-                <a href="../php/deconnexion.php" class="btn-action btn-danger" style="margin-top:18px;text-decoration:none;">
+                <a href="../php/deconnexion.php" class="btn-action btn-danger" style="margin-top:18px;">
                     <i class="fa-solid fa-sign-out-alt"></i> Déconnexion
                 </a>
             </div>
@@ -330,7 +331,7 @@ include '../includes/header.php';
         <!-- Colonne droite -->
         <div>
             <div class="profil-card">
-                <h2><i class="fa-regular fa-chart-bar"></i> Orientation</h2>
+                <h2><i class="fa-solid fa-chart-bar"></i> Orientation</h2>
                 
                 <?php if ($resultat): ?>
                     <?php 
@@ -425,5 +426,6 @@ include '../includes/header.php';
 </footer>
 
 <script src="../js/script.js"></script>
+
 </body>
 </html>

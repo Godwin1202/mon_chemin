@@ -8,10 +8,6 @@ if (isset($_SESSION['user_id'])) {
     header('Location: ../index.php');
     exit();
 }
-// Définir le préfixe pour les chemins
-$page_prefix = '../';
-// Inclure le header
-include '../includes/header.php';
 
 $error = '';
 $form_data = [];
@@ -46,7 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->fetch()) {
             $error = "Cette adresse email est déjà utilisée.";
         } else {
-            // Correction : 'niveau' au lieu de 'nivel'
             $stmt = $pdo->prepare("
                 INSERT INTO utilisateurs (nom, prenom, email, telephone, niveau, situation_handicap, type_handicap, parent_email, parent_whatsapp, mot_de_passe, role, date_creation)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'eleve', NOW())
@@ -70,6 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$page_prefix = '../';
+include '../includes/header.php';
 ?>
 
 <!DOCTYPE html>
@@ -91,7 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <div class="auth-header">
                 <div class="auth-icon">
-<i class="fa-solid fa-user-plus"></i>                </div>
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
                 <h1>Inscription</h1>
                 <p>Créez votre compte en quelques instants</p>
             </div>
@@ -181,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 
                 <button type="submit" class="auth-btn">
-                    <i class="fa-regular fa-paper-plane"></i> Créer mon compte
+                    <i class="fa-solid fa-paper-plane"></i> Créer mon compte
                 </button>
             </form>
             

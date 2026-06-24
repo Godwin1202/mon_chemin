@@ -15,29 +15,54 @@ if ($is_connected) {
     $user_role = $_SESSION['user_role'] ?? 'eleve';
     $user_prenom = $_SESSION['user_prenom'] ?? '';
     
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_sessions WHERE utilisateur_id = ? AND statut = 'en_attente'");
-    $stmt->execute([$_SESSION['user_id']]);
-    $has_pending = $stmt->fetchColumn();
-    
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_sessions WHERE utilisateur_id = ? AND statut = 'publie'");
-    $stmt->execute([$_SESSION['user_id']]);
-    $has_result = $stmt->fetchColumn();
+    // Vérifier les résultats dans quiz_resultats (et non quiz_sessions)
+    try {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_resultats WHERE utilisateur_id = ? AND statut = 'en_attente'");
+        $stmt->execute([$_SESSION['user_id']]);
+        $has_pending = $stmt->fetchColumn();
+        
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_resultats WHERE utilisateur_id = ? AND statut = 'publie'");
+        $stmt->execute([$_SESSION['user_id']]);
+        $has_result = $stmt->fetchColumn();
+    } catch (PDOException $e) {
+        // Table peut ne pas exister
+    }
 }
 
 // Récupérer les universités
-$stmt = $pdo->query("SELECT * FROM universites LIMIT 6");
-$universites = $stmt->fetchAll();
+$universites = [];
+try {
+    $stmt = $pdo->query("SELECT * FROM universites WHERE actif = 1 LIMIT 6");
+    $universites = $stmt->fetchAll();
+} catch (PDOException $e) {
+    // Table peut ne pas exister
+}
 
-// Récupérer les domaines pour la section
-$stmt = $pdo->query("SELECT * FROM domaines ORDER BY nom");
-$domaines = $stmt->fetchAll();
+// Récupérer les domaines
+$domaines = [];
+try {
+    $stmt = $pdo->query("SELECT * FROM domaines ORDER BY nom");
+    $domaines = $stmt->fetchAll();
+} catch (PDOException $e) {
+    // Table peut ne pas exister
+}
 
 // Statistiques
-$stmt = $pdo->query("SELECT COUNT(*) FROM utilisateurs WHERE role = 'eleve'");
-$total_eleves = $stmt->fetchColumn();
+$total_eleves = 0;
+$total_validations = 0;
 
-$stmt = $pdo->query("SELECT COUNT(*) FROM quiz_sessions WHERE statut = 'publie'");
-$total_validations = $stmt->fetchColumn();
+try {
+    $stmt = $pdo->query("SELECT COUNT(*) FROM utilisateurs WHERE role = 'eleve'");
+    $total_eleves = $stmt->fetchColumn();
+    
+    $stmt = $pdo->query("SELECT COUNT(*) FROM quiz_resultats WHERE statut = 'publie'");
+    $total_validations = $stmt->fetchColumn();
+} catch (PDOException $e) {
+    // Table peut ne pas exister
+}
+
+$page_prefix = '';
+include 'includes/header.php';
 ?>
 
 <!DOCTYPE html>
@@ -52,50 +77,6 @@ $total_validations = $stmt->fetchColumn();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-
-<!-- HEADER -->
-<header class="header">
-    <div class="container header-content">
-        <div class="logo">
-            <a href="index.php" style="display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit;">
-                <i class="fa-solid fa-graduation-cap"></i>
-                <div>
-                    <h2>Mon Chemin</h2>
-                    <p>Orientation Afrique de l'Ouest</p>
-                </div>
-            </a>
-        </div>
-
-        <nav class="navbar">
-            <a href="index.php" class="active">Accueil</a>
-            <a href="pages/quiz.php">Quiz</a>
-            <a href="pages/universites.php">Universités</a>
-            <a href="pages/conseils.php">Conseils</a>
-            <a href="pages/apropos.php">À propos</a>
-        </nav>
-
-        <div class="header-buttons">
-            <?php if ($is_connected): ?>
-                <div class="user-menu">
-                    <a href="pages/profil.php" class="btn white-btn" style="text-decoration: none;">
-                        <i class="fa-solid fa-user"></i> <span><?= htmlspecialchars($user_prenom) ?></span>
-                    </a>
-                    <?php if ($user_role === 'admin'): ?>
-                        <a href="admin/dashboard.php" class="btn blue-btn">
-                            <i class="fa-solid fa-gauge-high"></i> <span>Admin</span>
-                        </a>
-                    <?php endif; ?>
-                    <a href="php/deconnexion.php" class="btn logout-btn">
-                        <i class="fa-solid fa-sign-out-alt"></i> <span>Déconnexion</span>
-                    </a>
-                </div>
-            <?php else: ?>
-                <a href="pages/connexion.php" class="btn white-btn">Se connecter</a>
-                <a href="pages/inscription.php" class="btn blue-btn">S'inscrire</a>
-            <?php endif; ?>
-        </div>
-    </div>
-</header>
 
 <!-- HERO -->
 <section class="hero">
@@ -146,7 +127,7 @@ $total_validations = $stmt->fetchColumn();
 <!-- ACTIONS -->
 <section class="action-section">
     <div class="container action-grid">
-        <a href="pages/quiz.php" class="action-card blue-card" style="text-decoration: none;">
+        <a href="pages/quiz.php" class="action-card blue-card">
             <i class="fa-solid fa-pen"></i>
             <div>
                 <h3>Commencer le quiz</h3>
@@ -154,7 +135,7 @@ $total_validations = $stmt->fetchColumn();
             </div>
         </a>
 
-        <a href="pages/universites.php" class="action-card" style="text-decoration: none;">
+        <a href="pages/universites.php" class="action-card">
             <i class="fa-solid fa-building-columns"></i>
             <div>
                 <h3>Explorer les universités</h3>
@@ -162,7 +143,7 @@ $total_validations = $stmt->fetchColumn();
             </div>
         </a>
 
-        <a href="pages/conseils.php" class="action-card" style="text-decoration: none;">
+        <a href="pages/conseils.php" class="action-card">
             <i class="fa-solid fa-lightbulb"></i>
             <div>
                 <h3>Voir les conseils</h3>
@@ -225,6 +206,25 @@ $total_validations = $stmt->fetchColumn();
     </div>
 </section>
 
+<!-- DOMAINES D'ÉTUDES -->
+<section class="domaines-section">
+    <div class="container">
+        <h2 class="section-title">Domaines d'études</h2>
+        <div class="domaines-grid">
+            <?php foreach ($domaines as $domaine): ?>
+                <div class="domaine-card">
+                    <div class="domaine-icon">
+                        <i class="<?= htmlspecialchars($domaine['icone'] ?? 'fa-solid fa-graduation-cap') ?>"></i>
+                    </div>
+                    <h3><?= htmlspecialchars($domaine['nom']) ?></h3>
+                    <p><?= htmlspecialchars(substr($domaine['description'], 0, 60)) ?>...</p>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+
+<!-- UNIVERSITÉS -->
 <section class="universities-section">
     <div class="container">
         <h2 class="section-title">Universités partenaires</h2>
@@ -232,8 +232,7 @@ $total_validations = $stmt->fetchColumn();
             <?php foreach ($universites as $univ): ?>
                 <a href="pages/universites.php" class="university-card" style="text-decoration: none; color: inherit;">
                     <?php 
-                    // Générer le nom du fichier image à partir du nom de l'université
-                    $image_name = strtolower(str_replace([' ', "'", 'é', 'è', 'ê', 'à', 'â', 'î', 'ô', 'û'], ['', '', 'e', 'e', 'e', 'a', 'a', 'i', 'o', 'u'], $univ['nom']));
+                    $image_name = strtolower(str_replace([' ', "'", 'é', 'è', 'ê', 'à', 'â', 'î', 'ô', 'û', 'ç'], ['', '', 'e', 'e', 'e', 'a', 'a', 'i', 'o', 'u', 'c'], $univ['nom']));
                     $image_path = 'assets/logos/' . $image_name . '.png';
                     ?>
                     <img src="<?= $image_path ?>" 

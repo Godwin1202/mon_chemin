@@ -1,0 +1,29 @@
+=== MON CHEMIN ===
+Bilan d'orientation
+
+--- Informations de l'eleve ---
+Nom: azerty azerty
+Email: azerty@gmail.com
+Telephone: +22900000000
+
+--- Scores par domaine ---
+Informatique: 69 pts
+Sante: 54 pts
+Genie_civil: 77 pts
+Gestion: 82 pts
+Droit: 59 pts
+Enseignement: 82 pts
+Agronomie: 65 pts
+Communication: 80 pts
+Sciences_fond: 55 pts
+Arts: 78 pts
+
+--- Filières recommandées ---
+- Comptabilité
+- Finance
+- Marketing
+- Gestion des Ressources Humaines
+- Management
+
+
+Document genere le 24/06/2026 - Mon Chemin

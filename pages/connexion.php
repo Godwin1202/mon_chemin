@@ -12,10 +12,6 @@ if (isset($_SESSION['user_id'])) {
     }
     exit();
 }
-// Définir le préfixe pour les chemins
-$page_prefix = '../';
-// Inclure le header
-include '../includes/header.php';
 
 $error = '';
 $success = '';
@@ -36,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$email]);
         $user = $stmt->fetch();
         
+        // Utiliser password_verify en production
         if ($user && $password === $user['mot_de_passe']) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_email'] = $user['email'];
@@ -57,6 +54,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$page_prefix = '../';
+include '../includes/header.php';
 ?>
 
 <!DOCTYPE html>
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <div class="auth-header">
                 <div class="auth-icon">
-                    <i class="fa-regular fa-circle-user"></i>
+                    <i class="fa-solid fa-circle-user"></i> <!-- fa-regular → fa-solid -->
                 </div>
                 <h1>Connexion</h1>
                 <p>Accédez à votre espace personnel</p>
@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 
                 <button type="submit" class="auth-btn">
-                     Se connecter
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i> Se connecter
                 </button>
             </form>
             

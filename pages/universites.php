@@ -4,12 +4,6 @@
 session_start();
 require_once '../php/db.php';
 
-// Définir le préfixe pour les chemins
-$page_prefix = '../';
-
-// Inclure le header
-include '../includes/header.php';
-
 // Récupérer toutes les universités avec leurs filières
 $stmt = $pdo->query("
     SELECT u.*, 
@@ -35,7 +29,7 @@ foreach ($results as $row) {
             'id' => $row['id'],
             'nom' => $row['nom'],
             'description' => $row['description'] ?? 'Université partenaire',
-            'localisation' => $row['ville'] . ', ' . $row['pays'],
+            'localisation' => ($row['ville'] ? $row['ville'] . ', ' : '') . $row['pays'],
             'pays' => $row['pays'],
             'ville' => $row['ville'],
             'site_web' => $row['site_web'],
@@ -60,7 +54,7 @@ $universites = array_values($universites_data);
 $stmt = $pdo->query("SELECT id, nom FROM domaines ORDER BY nom");
 $domaines = $stmt->fetchAll();
 
-// Définir les images par défaut pour chaque université (si pas de logo)
+// Définir les images par défaut
 $default_images = [
     'Université d\'Abomey-Calavi' => 'uac.jpg',
     'Université de Parakou' => 'parakou.jpg',
@@ -76,6 +70,9 @@ $default_images = [
     'Université Cheikh Anta Diop' => 'ucad.jpg',
     'Université Félix Houphouët-Boigny' => 'ufhb.jpg',
 ];
+
+$page_prefix = '../';
+include '../includes/header.php';
 ?>
 
 <!DOCTYPE html>
@@ -140,6 +137,10 @@ $default_images = [
             object-fit: cover;
         }
         .card-image .fallback-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             font-size: 60px;
             color: rgba(255,255,255,0.3);
         }
@@ -204,7 +205,6 @@ $default_images = [
             border-radius: 24px;
             color: var(--gray);
         }
-        /* MODAL */
         .modal {
             display: none;
             position: fixed;
@@ -419,11 +419,9 @@ const universitesData = <?= json_encode($universites) ?>;
 const defaultImages = <?= json_encode($default_images) ?>;
 
 function getImageUrl(univ) {
-    // Si l'université a un logo défini en BDD
     if (univ.logo) {
         return '../assets/images/universites/' + univ.logo;
     }
-    // Sinon utiliser l'image par défaut
     const imageName = defaultImages[univ.nom] || 'default.jpg';
     return '../assets/images/universites/' + imageName;
 }
@@ -448,8 +446,8 @@ function renderUniversites(filterText = "", filterDomaine = "") {
             <div class="card-image">
                 <img src="${getImageUrl(univ)}" 
                      alt="${univ.nom}"
-                     onerror="this.style.display='none'; this.parentElement.querySelector('.fallback-icon').style.display='flex';">
-                <div class="fallback-icon" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:60px; color:rgba(255,255,255,0.3);">
+                     onerror="this.style.display='none'">
+                <div class="fallback-icon" style="display:${univ.logo ? 'none' : 'block'}">
                     <i class="fa-solid fa-building-columns"></i>
                 </div>
                 <div class="univ-name-overlay">
@@ -469,6 +467,7 @@ function renderUniversites(filterText = "", filterDomaine = "") {
                     `).join('')}
                     ${univ.filieres.length > 6 ? `<span style="font-size:12px;color:#94a3b8;">+${univ.filieres.length - 6}</span>` : ''}
                 </div>
+                ${univ.site_web ? `<div style="margin-top:8px;font-size:12px;color:#94a3b8;"><i class="fa-solid fa-globe"></i> <a href="${univ.site_web}" target="_blank" style="color:var(--primary);text-decoration:none;">${univ.site_web}</a></div>` : ''}
             </div>
         </div>
     `).join('');
@@ -533,5 +532,6 @@ renderUniversites();
 </script>
 
 <script src="../js/script.js"></script>
+
 </body>
 </html>

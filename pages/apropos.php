@@ -2,9 +2,10 @@
 // pages/apropos.php
 
 session_start();
+require_once '../php/db.php';
 
-$is_connected = isset($_SESSION['user_id']);
-$user_role = $_SESSION['user_role'] ?? 'eleve';
+$page_prefix = '../';
+include '../includes/header.php';
 ?>
 
 <!DOCTYPE html>
@@ -19,50 +20,6 @@ $user_role = $_SESSION['user_role'] ?? 'eleve';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-
-<!-- HEADER DYNAMIQUE -->
-<header class="header">
-    <div class="container header-content">
-        <div class="logo">
-            <a href="../index.php" style="display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit;">
-                <i class="fa-solid fa-graduation-cap"></i>
-                <div>
-                    <h2>Mon Chemin</h2>
-                    <p>Aide à l'orientation scolaire</p>
-                </div>
-            </a>
-        </div>
-
-        <nav class="navbar">
-            <a href="../index.php">Accueil</a>
-            <a href="quiz.php">Quiz</a>
-            <a href="universites.php">Universités</a>
-            <a href="conseils.php">Conseils</a>
-            <a href="apropos.php" class="active">À propos</a>
-        </nav>
-
-        <div class="header-buttons">
-            <?php if ($is_connected): ?>
-                <div class="user-menu">
-                    <a href="profil.php" class="btn white-btn">
-                        <i class="fa-solid fa-user"></i> <span>Mon profil</span>
-                    </a>
-                    <?php if ($user_role === 'admin'): ?>
-                        <a href="../admin/dashboard.php" class="btn blue-btn">
-                            <i class="fa-solid fa-gauge-high"></i> <span>Admin</span>
-                        </a>
-                    <?php endif; ?>
-                    <a href="../php/deconnexion.php" class="btn logout-btn">
-                        <i class="fa-solid fa-sign-out-alt"></i> <span>Déconnexion</span>
-                    </a>
-                </div>
-            <?php else: ?>
-                <a href="connexion.php" class="btn white-btn">Se connecter</a>
-                <a href="inscription.php" class="btn blue-btn">S'inscrire</a>
-            <?php endif; ?>
-        </div>
-    </div>
-</header>
 
 <!-- HERO À PROPOS -->
 <section class="hero">
@@ -87,7 +44,7 @@ $user_role = $_SESSION['user_role'] ?? 'eleve';
             </div>
         </div>
         <div class="hero-right">
-            <img src="../assets/illustrations/about.svg" alt="À propos">
+            <img src="../assets/illustrations/about.svg" alt="À propos" onerror="this.src='../assets/illustrations/hero1.svg'">
         </div>
     </div>
 </section>
@@ -109,7 +66,7 @@ $user_role = $_SESSION['user_role'] ?? 'eleve';
                 </p>
             </div>
             <div class="mission-image">
-                <img src="../assets/illustrations/mission.svg" alt="Mission">
+                <img src="../assets/illustrations/mission.svg" alt="Mission" onerror="this.style.display='none'">
             </div>
         </div>
     </div>
@@ -151,7 +108,7 @@ $user_role = $_SESSION['user_role'] ?? 'eleve';
         <div class="team-grid">
             <div class="team-card">
                 <div class="team-avatar">
-                    <img src="../assets/illustrations/avatar1.svg" alt="Développeur">
+                    <img src="../assets/illustrations/avatar1.svg" alt="Développeur" onerror="this.src='../assets/illustrations/hero1.svg'">
                 </div>
                 <h3>Développeur 1</h3>
                 <p>Étudiant en développement web</p>
@@ -159,7 +116,7 @@ $user_role = $_SESSION['user_role'] ?? 'eleve';
             </div>
             <div class="team-card">
                 <div class="team-avatar">
-                    <img src="../assets/illustrations/avatar2.svg" alt="Développeuse">
+                    <img src="../assets/illustrations/avatar2.svg" alt="Développeuse" onerror="this.src='../assets/illustrations/hero1.svg'">
                 </div>
                 <h3>Développeur 2</h3>
                 <p>Étudiant en développement web</p>
@@ -223,6 +180,7 @@ $user_role = $_SESSION['user_role'] ?? 'eleve';
             <a href="quiz.php">Quiz</a>
             <a href="universites.php">Universités</a>
             <a href="conseils.php">Conseils</a>
+            <a href="apropos.php">À propos</a>
         </div>
         <div>
             <h4>Informations</h4>
@@ -243,5 +201,6 @@ $user_role = $_SESSION['user_role'] ?? 'eleve';
 </footer>
 
 <script src="../js/script.js"></script>
+
 </body>
 </html>

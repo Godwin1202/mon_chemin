@@ -115,7 +115,56 @@ function getFilieresParDomaine($domaine, $pdo) {
 }
 
 // =====================================================
-// 6. FONCTION DE SAUVEGARDE DES RÉSULTATS
+// 6. FONCTION POUR FILTRER LES FILIÈRES SELON LE HANDICAP
+// =====================================================
+
+function filtrerFilieresParHandicap($filieres, $type_handicap, $pdo) {
+    if (empty($type_handicap)) {
+        return $filieres;
+    }
+    
+    // Définir les restrictions selon le type de handicap
+    $restrictions = [
+        'aveugle' => ['Design Graphique', 'Architecture', 'Topographie', 'Photographie', 'Arts Plastiques'],
+        'malvoyant' => ['Design Graphique', 'Architecture', 'Topographie', 'Photographie'],
+        'sourd' => ['Journalisme', 'Communication Digitale', 'Relations Publiques', 'Enseignement', 'Médecine Générale'],
+        'malentendant' => ['Journalisme', 'Relations Publiques'],
+        'mains' => ['Chirurgie', 'Pharmacie', 'Soins Infirmiers', 'Génie Civil', 'Architecture', 'Mécanique', 'Arts'],
+        'mobilité_reduite' => ['Topographie', 'Génie Civil', 'Agronomie', 'Production Animale'],
+        'voix' => ['Enseignement', 'Journalisme', 'Communication'],
+        'audition' => ['Journalisme', 'Relations Publiques']
+    ];
+    
+    $exclure = [];
+    $type = strtolower($type_handicap);
+    
+    // Vérifier quel type de handicap correspond
+    foreach ($restrictions as $key => $restricted_filieres) {
+        if (strpos($type, $key) !== false || strpos($key, $type) !== false) {
+            $exclure = array_merge($exclure, $restricted_filieres);
+        }
+    }
+    
+    // Supprimer les filières incompatibles
+    $exclure = array_unique($exclure);
+    return array_filter($filieres, function($filiere) use ($exclure) {
+        return !in_array($filiere, $exclure);
+    });
+}
+
+// =====================================================
+// 7. FONCTION POUR FILTRER LES UNIVERSITÉS SELON LE HANDICAP
+// =====================================================
+
+function filtrerUniversitesParHandicap($universites, $type_handicap, $pdo) {
+    if (empty($type_handicap)) {
+        return $universites;
+    }
+    return $universites;
+}
+
+// =====================================================
+// 8. FONCTION DE SAUVEGARDE DES RÉSULTATS (AVEC HANDICAP)
 // =====================================================
 
 function sauvegarderResultatsQuiz($user_id, $reponses, $pdo) {
@@ -146,6 +195,19 @@ function sauvegarderResultatsQuiz($user_id, $reponses, $pdo) {
     }
     $filieres_recommandees = array_slice($filieres_recommandees, 0, 5);
     
+    // Récupérer le type de handicap de l'utilisateur
+    $stmt = $pdo->prepare("SELECT type_handicap, situation_handicap FROM utilisateurs WHERE id = ?");
+    $stmt->execute([$user_id]);
+    $user_handicap = $stmt->fetch();
+    
+    if ($user_handicap && $user_handicap['situation_handicap'] == 1) {
+        $type_handicap = $user_handicap['type_handicap'] ?? '';
+        $filieres_recommandees = filtrerFilieresParHandicap($filieres_recommandees, $type_handicap, $pdo);
+        if (empty($filieres_recommandees)) {
+            $filieres_recommandees = array_slice($filieres_recommandees, 0, 2);
+        }
+    }
+    
     // Récupérer le pays choisi
     $pays = getPaysChoisi($reponses);
     
@@ -159,7 +221,14 @@ function sauvegarderResultatsQuiz($user_id, $reponses, $pdo) {
         ];
     }
     
-    // CORRECTION : Insérer dans quiz_resultats (pas dans quiz_sessions)
+    // Récupérer les universités
+    $universites = getUniversitesParPays($pays, $pdo);
+    
+    if ($user_handicap && $user_handicap['situation_handicap'] == 1) {
+        $universites = filtrerUniversitesParHandicap($universites, $type_handicap ?? '', $pdo);
+    }
+    
+    // Insérer dans quiz_resultats
     $stmt = $pdo->prepare("
         INSERT INTO quiz_resultats (
             session_id, 
@@ -174,9 +243,6 @@ function sauvegarderResultatsQuiz($user_id, $reponses, $pdo) {
         VALUES (?, ?, ?, ?, ?, ?, 'en_attente', NOW())
     ");
     
-    // Pour les universités, on récupère celles du pays choisi
-    $universites = getUniversitesParPays($pays, $pdo);
-    
     $stmt->execute([
         $session_id,
         $user_id,
@@ -185,8 +251,6 @@ function sauvegarderResultatsQuiz($user_id, $reponses, $pdo) {
         json_encode($filieres_recommandees),
         json_encode($universites)
     ]);
-    
-    $resultat_id = $pdo->lastInsertId();
     
     // Sauvegarder les réponses détaillées
     $stmt = $pdo->prepare("
@@ -209,7 +273,7 @@ function sauvegarderResultatsQuiz($user_id, $reponses, $pdo) {
 }
 
 // =====================================================
-// 7. FONCTION POUR RÉCUPÉRER LES UNIVERSITÉS PAR PAYS
+// 9. FONCTION POUR RÉCUPÉRER LES UNIVERSITÉS PAR PAYS
 // =====================================================
 
 function getUniversitesParPays($pays, $pdo) {
@@ -227,7 +291,7 @@ function getUniversitesParPays($pays, $pdo) {
 }
 
 // =====================================================
-// 8. FONCTION POUR RÉCUPÉRER LES RÉSULTATS
+// 10. FONCTION POUR RÉCUPÉRER LES RÉSULTATS
 // =====================================================
 
 function getResultatsQuiz($session_id, $pdo) {
@@ -252,7 +316,7 @@ function getResultatsQuiz($session_id, $pdo) {
 }
 
 // =====================================================
-// 9. FONCTION POUR RÉCUPÉRER LE DERNIER QUIZ D'UN ÉLÈVE
+// 11. FONCTION POUR RÉCUPÉRER LE DERNIER QUIZ D'UN ÉLÈVE
 // =====================================================
 
 function getLastQuiz($user_id, $pdo) {
@@ -278,7 +342,7 @@ function getLastQuiz($user_id, $pdo) {
 }
 
 // =====================================================
-// 10. FONCTION POUR VALIDER UN RÉSULTAT (ADMIN)
+// 12. FONCTION POUR VALIDER UN RÉSULTAT (ADMIN)
 // =====================================================
 
 function validerResultatAdmin($session_id, $admin_id, $action, $commentaire = '', $pdo) {
@@ -299,7 +363,6 @@ function validerResultatAdmin($session_id, $admin_id, $action, $commentaire = ''
             break;
     }
     
-    // Mettre à jour le statut dans quiz_resultats
     $stmt = $pdo->prepare("
         UPDATE quiz_resultats 
         SET statut = ?, 
@@ -310,7 +373,6 @@ function validerResultatAdmin($session_id, $admin_id, $action, $commentaire = ''
     ");
     $stmt->execute([$statut, $admin_id, $commentaire, $session_id]);
     
-    // Enregistrer l'historique
     $stmt = $pdo->prepare("
         INSERT INTO validations_admin (resultat_id, admin_id, action, commentaire)
         VALUES ((SELECT id FROM quiz_resultats WHERE session_id = ?), ?, ?, ?)
@@ -321,7 +383,7 @@ function validerResultatAdmin($session_id, $admin_id, $action, $commentaire = ''
 }
 
 // =====================================================
-// 11. FONCTION POUR RÉCUPÉRER LE RÉSULTAT D'UN ÉLÈVE (PUBLIÉ)
+// 13. FONCTION POUR RÉCUPÉRER LE RÉSULTAT D'UN ÉLÈVE (PUBLIÉ)
 // =====================================================
 
 function getResultatEleve($user_id, $pdo) {

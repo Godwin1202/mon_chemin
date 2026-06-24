@@ -5,12 +5,35 @@ session_start();
 require_once '../php/db.php';
 require_once '../php/auth.php';
 
-// ... votre code PHP ...
+// EMPÊCHER L'ADMIN D'ACCÉDER AU QUIZ
+if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin') {
+    header('Location: ../admin/dashboard.php');
+    exit();
+}
 
-// Définir le préfixe pour les chemins
+// Vérifier que l'utilisateur est connecté
+if (!isset($_SESSION['user_id'])) {
+    header('Location: connexion.php');
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+
+// Vérifier si l'utilisateur a déjà un quiz en attente ou validé
+try {
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM quiz_resultats WHERE utilisateur_id = ? AND statut IN ('en_attente', 'valide')");
+    $stmt->execute([$user_id]);
+    $has_pending = $stmt->fetchColumn();
+
+    if ($has_pending > 0) {
+        header('Location: attente.php');
+        exit();
+    }
+} catch (PDOException $e) {
+    // Table peut ne pas exister encore
+}
+
 $page_prefix = '../';
-
-// Inclure le header
 include '../includes/header.php';
 
 // Récupérer toutes les questions du quiz
@@ -102,6 +125,17 @@ function getDefaultOptions($question_num) {
             ['option_valeur' => 'coder', 'option_texte' => 'Coder / Créer', 'option_icone' => null],
             ['option_valeur' => 'sport', 'option_texte' => 'Faire du sport', 'option_icone' => null],
             ['option_valeur' => 'sortir', 'option_texte' => 'Sortir avec des amis', 'option_icone' => null]
+        ],
+        5 => [
+            ['option_valeur' => 'analytique', 'option_texte' => 'Analytique / Logique', 'option_icone' => null],
+            ['option_valeur' => 'creatif', 'option_texte' => 'Créatif / Imaginatif', 'option_icone' => null],
+            ['option_valeur' => 'social', 'option_texte' => 'Social / Aider les autres', 'option_icone' => null],
+            ['option_valeur' => 'organise', 'option_texte' => 'Organisé / Planificateur', 'option_icone' => null]
+        ],
+        6 => [
+            ['option_valeur' => 'indep', 'option_texte' => 'Indépendant / Freelance', 'option_icone' => null],
+            ['option_valeur' => 'equipe', 'option_texte' => 'En équipe / Collaboration', 'option_icone' => null],
+            ['option_valeur' => 'mixte', 'option_texte' => 'Mixte / Variable', 'option_icone' => null]
         ]
     ];
     
@@ -330,7 +364,6 @@ function getDefaultOptions($question_num) {
 </head>
 <body>
 
-
 <section class="hero">
     <div class="container hero-content">
         <div class="hero-left">
@@ -551,7 +584,6 @@ function showError(message) {
     }, 3000);
 }
 
-// Attendre que le DOM soit chargé
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM chargé, initialisation du quiz...');
     
